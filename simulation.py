@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 # Configure the API key
-genai.configure(api_key="AIzaSyCMtgjCDQl7iBJsLa2iGTH0KBmsIw3UGFo")
+genai.configure(api_key="") # Provide you Gemini APi Key
 
 # Initialize the Gemini client
 model = genai.GenerativeModel('gemini-1.0-pro-latest')
