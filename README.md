@@ -29,7 +29,7 @@ This project is a traffic signal simulation that uses AI to manage and optimize 
    ```bash
    pip install pygame google-generativeai ultralytics opencv-python matplotlib torch
 3. Configure the Google Generative AI API key:
-- Replace YOUR_API_KEY in the code with your actual API key.
+Replace YOUR_API_KEY in the code with your actual API key.
    ```bash
    genai.configure(api_key="YOUR_API_KEY")
 
