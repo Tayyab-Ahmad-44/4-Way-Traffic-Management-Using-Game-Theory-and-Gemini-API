@@ -38,7 +38,6 @@ Here is a video demonstration of the project:
 
 <video width="600" controls>
   <source src="output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
 </video>
 
 ## Usage
