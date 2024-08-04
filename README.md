@@ -23,7 +23,7 @@ This project is a traffic signal simulation that uses AI to manage and optimize 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your_username/traffic-signal-simulation.git
+   git clone https://github.com/Tayyab-Ahmad-44/traffic-signal-simulation.git
    cd traffic-signal-simulation
 2. Install the required libraries:
    ```bash
