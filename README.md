@@ -33,6 +33,14 @@ Replace YOUR_API_KEY in the code with your actual API key.
    ```bash
    genai.configure(api_key="YOUR_API_KEY")
 
+## Video Demonstration
+Here is a video demonstration of the project:
+
+<video width="600" controls>
+  <source src="output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## Usage
 1. Run the simulation:
    ```bash
