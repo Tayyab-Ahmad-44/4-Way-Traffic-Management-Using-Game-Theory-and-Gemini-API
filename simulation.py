@@ -4,11 +4,12 @@ import threading
 import pygame
 import sys
 import google.generativeai as genai
+from ultralytics import YOLOv10
 import torch
-from ultralytics import YOLO
 import cv2
-import matplotlib.pyplot as plt
-
+# import supervision as sv
+# import matplotlib.pyplot as plt
+import numpy as np
 
 # Configure the API key
 genai.configure(api_key="AIzaSyCMtgjCDQl7iBJsLa2iGTH0KBmsIw3UGFo")
@@ -23,10 +24,11 @@ defaultYellow = 2
 signals = []
 noOfSignals = 4
 currentGreen = 0   
-nextGreen = None
+nextGreen = 1
 currentYellow = 0    
 
 speeds = {'car':2.25, 'bus':1.8, 'truck':1.8, 'bike':2.5}
+
 
 x = {'right':[0,0,0], 'down':[755,727,697], 'left':[1400,1400,1400], 'up':[602,627,657]}    
 y = {'right':[348,370,398], 'down':[0,0,0], 'left':[498,466,436], 'up':[800,800,800]}
@@ -42,7 +44,22 @@ stopLines = {'right': 590, 'down': 330, 'left': 800, 'up': 535}
 defaultStop = {'right': 580, 'down': 320, 'left': 810, 'up': 545}
 
 stoppingGap = 15 
-movingGap = 15   
+movingGap = 15
+
+# Ensure only specific parts use GPU
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Assuming yolo is a PyTorch model
+yolo = YOLOv10("T:\\Sus\\TrafficLight\\model\\yolov10x_tuned.pt").to(device)
+
+print(next(yolo.parameters()).device)
+temp = cv2.imread('T:\\Sus\\TrafficLight\\output_images\\13.png')
+yolo(temp)[0]
+
+video_writer = None
+record_video = True
+output_video_path = 'simulation_output.mp4'
+running = True
 
 pygame.init()
 simulation = pygame.sprite.Group()
@@ -69,6 +86,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.index = len(vehicles[direction][lane]) - 1
         path = "images/" + direction + "/" + vehicleClass + ".png"
         self.image = pygame.image.load(path)
+        
 
         if(len(vehicles[direction][lane])>1 and vehicles[direction][lane][self.index-1].crossed==0):    # if more than 1 vehicle in the lane of vehicle before it has crossed stop line
             if(direction=='right'):
@@ -143,6 +161,7 @@ def initialize():
     signals.append(ts3)
     ts4 = TrafficSignal(defaultYellow, defaultGreen[3])
     signals.append(ts4)
+    
     repeat()
 
 def repeat():
@@ -156,6 +175,7 @@ def repeat():
     for i in range(0,3):
         for vehicle in vehicles[directionNumbers[currentGreen]][i]:
             vehicle.stop = defaultStop[directionNumbers[currentGreen]]
+
     while(signals[currentGreen].yellow>0):  # while the timer of current yellow signal is not zero
         updateValues()
         time.sleep(1)
@@ -176,7 +196,9 @@ def updateValues():
 
 # Generating vehicles in the simulation
 def generateVehicles():
+    global img_counter
     while(True):
+           
         vehicle_type = random.randint(0,3)
         lane_number = random.randint(1,2)
         temp = random.randint(0,99)
@@ -198,40 +220,75 @@ def generateVehicles():
         Vehicle(lane_number, vehicleTypes[vehicle_type], direction_number, directionNumbers[direction_number])
         
         time.sleep(1)
-        
+
+def get_car_count(img):
+    global yolo, device
+
+    # Perform a single inference on the entire image
+    results = yolo(img)[0]
+
+    # Get the image dimensions
+    height, width = img.shape[:2]
+
+    # Define the regions of interest (ROIs) for each direction
+    roi_left = [(0, 352), (590, 435)]
+    roi_right = [(int(0.5643*width), int(0.53125*height)), (width, int(0.6375*height))]
+    roi_up = [(int(0.4857*width), 0), (int(0.55*width), int(0.43125*height))]
+    roi_down = [(int(0.4286*width), int(0.64375*height)), (int(0.4929*width), height)]
+
+    # Function to check if a box is within a ROI
+    def is_in_roi(box, roi):
+        x1, y1, x2, y2 = box.xyxy[0].tolist()
+        roi_x1, roi_y1 = roi[0]
+        roi_x2, roi_y2 = roi[1]
+        return (x1 >= roi_x1 and y1 >= roi_y1 and x2 <= roi_x2 and y2 <= roi_y2)
+
+    # Count vehicles in each direction
+    left_count = sum(1 for box in results.boxes if is_in_roi(box, roi_left))
+    right_count = sum(1 for box in results.boxes if is_in_roi(box, roi_right))
+    up_count = sum(1 for box in results.boxes if is_in_roi(box, roi_up))
+    down_count = sum(1 for box in results.boxes if is_in_roi(box, roi_down))
+
+    return left_count, right_count, up_count, down_count
+
+
+def get_state():
+    screen_capture = pygame.surfarray.array3d(pygame.display.get_surface())
+    screen_capture = screen_capture.transpose([1, 0, 2])  # Convert from (width, height, channel) to (height, width, channel)
+    screen_capture = cv2.cvtColor(screen_capture, cv2.COLOR_RGB2BGR)
+    
+    left, right, up, down = get_car_count(screen_capture)
+    
+    state = {
+        "currentGreen": currentGreen,
+        "vehicles": {0: left, 1: up, 2: right, 3: down}
+    }
+    
+    return state
 
 def get_decision_from_ai():
     global currentGreen, currentYellow, nextGreen
     while True:    
-        # Load a pre-trained YOLOv8 model
-        model = YOLO('yolov8n.pt')
-        image = cv2.imread('simulation-output.png')
-
-        if signals[currentGreen].green == 0:
-            right = (len(vehicles['right'][0]) + len(vehicles['right'][1]) + len(vehicles['right'][2]))-vehicles['right']['crossed']
-            left = (len(vehicles['left'][0]) + len(vehicles['left'][1]) + len(vehicles['left'][2]))-vehicles['left']['crossed']
-            up = (len(vehicles['up'][0]) + len(vehicles['up'][1]) + len(vehicles['up'][2]))-vehicles['up']['crossed']
-            down = (len(vehicles['down'][0]) + len(vehicles['down'][1]) + len(vehicles['down'][2]))-vehicles['down']['crossed']
-            state = {
-                "currentGreen": currentGreen,
-                "vehicles": {d: (len(vehicles[d][0]) + len(vehicles[d][1]) + len(vehicles[d][2]))-vehicles[d]['crossed'] for d in directionNumbers.values()}
-            }
+        if signals[currentGreen].green == 2:
+            print("hi")
+            state = get_state()
+            print(state)
             
             prompt = (
                 f"Current green light is on road number: {state['currentGreen']}\n"
             )
-            prompt += "Vehicle Counts on Roads:\n"
+            prompt += f"Vehicle Counts on Roads:\n"
             for i, count in enumerate(state['vehicles'].values()):
                 prompt += f"  Road {i}: {count} vehicles\n"
 
             prompt += """Analyze the following data and decide what signal has to go green next based on the following factors: 
             1- Fist main factor is to see the count of car the one with the most cars road has to go green.
-            2- Based on the number of car also give time for the green light to be on(1 car take 1 sec).
-            3- If there is ambulance. Make green light for that road.
+            2- Determine an appropriate green light duration based on the number of waiting vehicles (approximately 1 second per car).
+            3- If there is ambulance. Priotize that roads.
                         """
 
             prompt += """
-            Provide the next signal state in the format: 
+            Provide the next signal state in the format evrytime dont give any other output: 
             nextGreen: <road number>, defaultGreen: <green time>
             """
             
@@ -239,29 +296,19 @@ def get_decision_from_ai():
                 analysis_results = model.generate_content(prompt)
                 
                 decision_text = analysis_results.candidates[0].content.parts[0].text.strip()
+                print(decision_text)
 
                 decision = {}
                 for part in decision_text.split(','):
                     key, value = part.split(':')
                     decision[key.strip()] = int(value.strip())
-                print(decision)
                 
                 nextGreen = decision['nextGreen'] # set next signal as green signal
                 defaultGreen[nextGreen] = decision['defaultGreen']
                 
                 gTime = defaultGreen[nextGreen]
-
-                if gTime > 10:
-                    gTime -= 5
-                elif gTime > 6:
-                    gTime -= 3
-                elif gTime > 4:
-                    gTime -= 1
-                elif gTime < 2:
-                    gTime += 2
                 
-                
-                signals[nextGreen].green = gTime
+                signals[nextGreen].green = gTime if gTime > 3 else 4
                 signals[nextGreen].yellow = defaultYellow
 
             except Exception as e:
@@ -279,9 +326,7 @@ def get_decision_from_ai():
                 signals[nextGreen].green = gTime
                 signals[nextGreen].yellow = defaultYellow
                 
-                
         time.sleep(1)
-        
 
 class Main:
     thread1 = threading.Thread(name="initialization",target=initialize, args=())    # initialization
@@ -346,5 +391,3 @@ class Main:
             screen.blit(vehicle.image, [vehicle.x, vehicle.y])
             vehicle.move()
         pygame.display.update()
-        
-Main()
