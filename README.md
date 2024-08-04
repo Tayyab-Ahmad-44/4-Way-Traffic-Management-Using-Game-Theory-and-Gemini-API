@@ -36,7 +36,8 @@ Replace YOUR_API_KEY in the code with your actual API key.
 ## Usage
 1. Run the simulation:
    ```bash
-   python main.py
+   python simulation.py
+
 2. The simulation window will open, showing the intersection with traffic signals and moving vehicles.
 
 ## License
