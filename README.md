@@ -34,13 +34,9 @@ Replace YOUR_API_KEY in the code with your actual API key.
    genai.configure(api_key="YOUR_API_KEY")
 
 ## Video Demonstration
-Here is a video demonstration of the project:
 
-<video width="600" controls>
-  <source src="output_video.mp4" type="video/mp4">
-</video>
-
-
+CHeck out the output video in the repository or click on this link.
+https://github.com/Tayyab-Ahmad-44/Traffic-Signal-Simulation-with-AI-Decision-Making/blob/main/output_video.mp4
 
 ## Usage
 1. Run the simulation:
