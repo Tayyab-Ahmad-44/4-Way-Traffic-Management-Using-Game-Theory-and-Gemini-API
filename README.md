@@ -38,6 +38,8 @@ Replace YOUR_API_KEY in the code with your actual API key.
 CHeck out the output video in the repository or click on this link.
 https://github.com/Tayyab-Ahmad-44/Traffic-Signal-Simulation-with-AI-Decision-Making/blob/main/output_video.mp4
 
+![simulation-output](https://github.com/user-attachments/assets/89ebe834-b270-4ea2-abdd-45a9ea7dd3f7)
+
 ## Usage
 1. Run the simulation:
    ```bash
