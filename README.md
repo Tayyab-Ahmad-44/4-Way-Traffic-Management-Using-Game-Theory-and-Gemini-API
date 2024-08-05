@@ -1,6 +1,6 @@
-# Traffic Signal Simulation with AI Decision-Making
+# Traffic Signal Control Simulation with AI Decision-Making
 
-This project is a traffic signal simulation that uses AI to manage and optimize traffic flow. The simulation models traffic signals and vehicles at a four-way intersection, dynamically adjusting signal timing based on real-time vehicle counts using a pre-trained YOLO model and a generative AI model.
+This project is a traffic signal control simulation that uses AI to manage and optimize traffic flow. The simulation models traffic signals and vehicles at a four-way intersection, dynamically adjusting signal timing based on real-time vehicle counts using a pre-trained YOLO model and a generative AI model.
 
 ## Features
 
